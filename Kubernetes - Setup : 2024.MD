@@ -152,7 +152,7 @@ for pkg in docker.io docker-doc docker-compose podman-docker containerd runc; do
 ```
 ##### 3.2.2 修改docker配置：
 - 设置cgroup driver 为systemd（kubernetes V1.22.2版本及其以后，要求容器的cgroup driver为systemd，但是docker默认的cgroup driver是cgroupfs），这一步非常重要；
-- 配置镜像加速器，使用阿里云的(镜像服务器)[https://cr.console.aliyun.com/cn-hangzhou/instances/mirrors]；
+- 配置镜像加速器，使用阿里云的[镜像服务器](https://cr.console.aliyun.com/cn-hangzhou/instances/mirrors)；
 > 阿里云的镜像服务器是绑定到个人账号的，每个人的URI地址是不同的，需要注册一个阿里云账号
 ```commandline
 > cat > /etc/docker/daemon.json <<EOF
@@ -325,6 +325,7 @@ controlPlaneEndpoint: k8s-master.ariman.com:6443   //修改6，添加control-pla
 ```commandline
 > kubeadm config images pull --config=init.config.yaml
 ```
+> 拉取镜像的时候，如果出现`nework is unreachable`之类的问题，可以单独使用`docker image pull`命令测试看能不能正常拉取镜像，如果也报错同样的问题，就需要单独解决，这就不是k8s的问题，而是docker自己的网络问题，比如dns配置不当，参见[这里](https://blog.csdn.net/yukai08008/article/details/121512212)
 
 ##### 4.3.4 初始化集群
 ```commandline
@@ -338,13 +339,6 @@ controlPlaneEndpoint: k8s-master.ariman.com:6443   //修改6，添加control-pla
 > sudo kubeadm init --config=init.config.yaml
 ```
 
-
-
-华为云需要开放6443端口？？？
-
-
-
-
 复制配置文件到普通用户的目录下（必须，不然会报错找不到apierver)
 ```commandline
 > mkdir -p $HOME/.kube
@@ -355,24 +349,32 @@ controlPlaneEndpoint: k8s-master.ariman.com:6443   //修改6，添加control-pla
 
 可以验证kubectl命令了
 ```commandline
-kubectl get -n kube-system configmap
+kubectl get nodes
 ```
 
-安装CNI网络插件（网络插件安装之前，Master node的状态会是NotReady）
+#### 4.4 安装CNI网络插件（网络插件安装之前，Master node的状态会是NotReady）
+至此，k8s集群的基本安装已经完成，但还需要安装CNI网络插件，CNI网络插件有多种不同的插件，这里使用`calio`：
+> 下面的命令中使用的是v3.27.0版本，这是目前的最新版本。安装时具体的版本和命令可以参考calio的[官方文档](https://docs.tigera.io/calico/latest/getting-started/kubernetes/self-managed-onprem/onpremises#install-calico-with-kubernetes-api-datastore-50-nodes-or-less)，其中，calio有`operator`和`manifest`两种安装方式，自己玩儿的话，使用manifest就足够了。
 ```commandline
-> rm -f calico.yaml
-> wget https://docs.projectcalico.org/v3.8/manifests/calico.yaml
-
-# 就是替换默认配置文件中的SUBNET地址
-> sed -i "s#192\.168\.0\.0/16#${POD_SUBNET}#" calico.yaml
-
-# 不要使用sudo，否则会connection refused，因为上面已经把KUBECONFIG指定到了普通用户下，sudo使用root权限，会报错
+> wget https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/calico.yaml
 > kubectl apply -f calico.yaml
 ```
-
-网络组建安装完成后，就可以验证Master端的Pod状态了
+calio构建需要一些时间，可以使用watch命令来持续查看资源的状态：
 ```commandline
-> kubectl get pods --all-namespaces
+watch kubectl get pods -A
+```
+当所以pod的状态都变成Running时，如下所示，K8s集群master节点的安装就完成了。
+```
+NAMESPACE     NAME                                            READY   STATUS    RESTARTS   AGE
+kube-system   calico-kube-controllers-5fc7d6cf67-vwq5g        1/1     Running   0          6m55s
+kube-system   calico-node-47zjf                               1/1     Running   0          6m55s
+kube-system   coredns-66f779496c-6tbwp                        1/1     Running   0          11m
+kube-system   coredns-66f779496c-kggkl                        1/1     Running   0          11m
+kube-system   etcd-k8s-master.ariman.com                      1/1     Running   0          12m
+kube-system   kube-apiserver-k8s-master.ariman.com            1/1     Running   0          12m
+kube-system   kube-controller-manager-k8s-master.ariman.com   1/1     Running   0          12m
+kube-system   kube-proxy-vcjxq                                1/1     Running   0          11m
+kube-system   kube-scheduler-k8s-master.ariman.com            1/1     Running   0          12m
 ```
 
 ### 5. 异常处理
@@ -399,85 +401,47 @@ The connection to xxx.xxx.xxx.xxx:6443 was refused - did you specify right host 
 > sudo kubeadm init --config=init.config.yaml
 ```
 
+#### kubeadm init失败
+在初始化集群时，如果链接的网络不能访问外网，那么十有八九会出现下面的错误：
+```
+Unfortunately, an error has occurred:
+timed out waiting for the condition
 
+This error is likely caused by:
 
+    The kubelet is not running
+    The kubelet is unhealthy due to a misconfiguration of the node in some way (required cgroups disabled)
 
+If you are on a systemd-powered system, you can try to troubleshoot the error with the following commands:
+    ‘systemctl status kubelet’
+    ‘journalctl -xeu kubelet’
+    
+Additionally, a control plane component may have crashed or exited when started by the container runtime.
+To troubleshoot, list all containers using your preferred container runtimes CLI, e.g. docker.
+Here is one example how you may list all Kubernetes containers running in docker:
 
-
-
-
-
-
-
-
-
-
-
-#### Node
-Node的OS安装和Kubernetes的安装，和Master的基本一致（#10）之前，安装完成后，进行初始化配置即可
-
-1. 获取初始化连接命令
-```commandline
-# 在Master运行
-> kubeadm token create --print-join-command
+    ‘docker ps -a | grep kube | grep -v pause’
+Once you have found the failing container, you can inspect its logs with:
+    ‘docker logs CONTAINERID’
+error execution phase wait-control-plane: couldn’t initialize a Kubernetes cluster
 ```
 
-2. 连接WorkNode和Master
+具体的错误原因使用下面的命令查看：
 ```commandline
-# 在hosts里配置Master的IP，比如
-> echo "${MASTER_IP}    apiserver.ariman" >> /etc/hosts
-
-# 在Node执行上面获取的命令，比如：
-> kubeadm join apiserver.ariman:6443 --token mpfjma.4vjjg8flqihor4vt     --discovery-token-ca-cert-hash sha256:6f7a8e40a810323672de5eee6f4d19aa2dbdb38411845a1bf5dd63485c43d303
-```
-如果当前WorkNode曾今加入过别的Cluster，并且没有正常退出，则需要先重置环境
-```commandline
-# 在WorkNode上
-> kubeadm reset    # 重置成初始化环境
+# 一定要sudo，否则日志是空的
+> sudo journalctl -xeu kubelet
 ```
 
-3. 验证连接情况
+如果日志里面包含`failed pulling image \"k8s.gcr.io/pause:x.x\"`，就说明在拉取`pause:x.x`镜像时出错。原因在于k8s.gcr.io这个仓库在国内几乎是访问不到的。虽然我们在之前的init.config.yaml文件中使用了阿里云的镜像仓库，但这个pause镜像比较特殊，会单独使用k8s.gcr.io这个仓库，解决这个问题的方法如下：
+
+先手动从阿里云的镜像仓库中拉取相同版本的pause镜像：
 ```commandline
-# 在Master查看Nodes
-> kubectl get nodes   # workNode的状态可能要等一段时间才会变成Ready
+> docker image pull registry.aliyuncs.com/google_containers/pause:x.x
 ```
 
-4. 移除WorkNode，需要时执行
+然后给它打一个k8s.gcr.io的tag：
 ```commandline
-# WorkNode
-> kubeadm reset
-
-# Master
-> kubectl drain node [node-name]
-> kubectl delete node [node-name]
+> docker tag registry.aliyuncs.com/google_containers/pause:x.x k8s.gcr.io/pause:x.x
 ```
+这样kubeadm在拉取时就会首先使用本地的`k8s.gcr.io/pause:x.x`镜像，而不会去访问外网了。
 
-#### Ingress
-- 安装Ingress Controller
-```commandline
-# 只在 master 节点执行
-> kubectl apply -f https://kuboard.cn/install-script/v1.16.0/nginx-ingress.yaml
-```
-详细的安装步骤说明，可以查看Nginxinc官网的Repo：[kubernetes-ingress/installation.md at master · nginxinc/kubernetes-ingress · GitHub](https://github.com/nginxinc/kubernetes-ingress/blob/master/docs/installation.md)
-
-查看Ingress Controller正常运行
-```commandline
-> kubectl get pods --namespace=nginx-ingress
-```
-
-配置DNS解析，指到到其中的一台workNode
-> 比如在`/etc/hosts`文件中添加
-> [workNodeIp]  demo.k8sariman.com
-> 
-
-用浏览器访问`demo.k8sariman.com`可以看到Nginx的404页面。
-
-
-- 删除Ingress Controller
-
-因为使用了`nginx-ingress`这个namespace来关联全部的ingress资源，所以可以通过直接删除这个namespace来删除Ingress Controller
-```commandline
-> kubectl delete namespace nginx-ingress
-```
-
-另外，如果安装了RBAC，则需要单独删除ClusterRole和Clust
