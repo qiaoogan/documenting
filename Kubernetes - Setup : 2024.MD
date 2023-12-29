@@ -335,7 +335,12 @@ controlPlaneEndpoint: k8s-master.ariman.com:6443   //修改6，添加control-pla
 ##### 4.3.5 重置集群（可选）
 在初始化的过程中如果出错，可以重置集群，然后重新初始化
 ```commandline
+# reset
 > sudo kubeadm reset --cri-socket unix:///var/run/cri-dockerd.sock
+> sudo rm -rf /etc/kubernetes
+> sudo rm ~/.kube/config
+
+# re-init
 > sudo kubeadm init --config=init.config.yaml
 ```
 
