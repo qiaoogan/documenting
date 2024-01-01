@@ -383,6 +383,12 @@ kube-system   kube-proxy-vcjxq                                1/1     Running   
 kube-system   kube-scheduler-k8s-master.ariman.com            1/1     Running   0          12m
 ```
 
+#### 4.5 取消Master节点的污点
+通常情况下，Master节点是不允许部署服务的，k8s使用污点来确保不将Master节点调度给服务进行部署，而我们需要在Master节点上部署服务的话，需要执行下面的命令来删除Master节点上的污点：
+```commandline
+kubectl taint nodes k8s-master.ariman.com node-role.kubernetes.io/control-plane:NoSchedule-
+```
+
 ### 5. 异常处理
 不出问题就不是K8S！！！！
 
