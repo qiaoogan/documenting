@@ -7,6 +7,7 @@ Kubernetes - Setup : 2024
 - https://acytoo.com/ladder/debian12-kubernetes-installation-and-config-master-worker/
 - https://blog.csdn.net/qq_15045983/article/details/127678302
 - [Linux系统镜像源](https://developer.aliyun.com/article/1146440)
+- https://segmentfault.com/a/1190000040043530?sort=votes
 
 ### 1. 更新source.list镜像:
 替换`/etc/apt/source.list`文件内容为以下国内源：
