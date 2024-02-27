@@ -9,6 +9,7 @@ sudo apt install nginx
 
 #### 配置防火墙(可选）
 > 默认情况下，nginx安装完成后，会自动打开HTTP端口，所以下面的步骤是可选的
+
 Nginx服务一般用于托管外部接入的服务，所以通常都是监听HTTP的80端口和HTTPS的443端口，这就需要在防火墙中打开响应的端口。
 ```commandline
 sudo ufw app list
