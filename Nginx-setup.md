@@ -64,4 +64,16 @@ systemctl status nginx
              ├─3197779 "nginx: worker process" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" ""
              └─3197780 "nginx: worker process" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" ""
 ```
+### 管理Nginx服务
+管理Nginx服务的常用方式都是通过systemctl命令来完成的，比如：
+```commandline
+sudo systemctl start nginx     // 启动nginx服务
+sudo systemctl stop nginx      // 停止ngin服务
+sudo systemctl restart nginx   // 从新启动nginx服务
+sudo systemctl reload nginx    // 更新配置后重新加载
+sudo systemctl disable nginx   // 禁止在系统启动时自动启动nginx
+sudo systemctl enable nginx    // 设置在系统启动时自动启动nginx
+```
+
 ### 配置Nginx服务
+
