@@ -1,5 +1,6 @@
-在Debian11上安装配置Nginx服务
+在Debian11上安装配置Nginx服务做反向代理
 --
+Nginx是一个广泛使用的代理或者文件服务器，这里在Debian 11上原生安装配置（不使用容器）Nginx来做反向代理，目的是对外暴露服务器上面运行在K8S集群中的服务。
 
 ### 安装Nginx服务
 ```commandline
@@ -74,6 +75,46 @@ sudo systemctl reload nginx    // 更新配置后重新加载
 sudo systemctl disable nginx   // 禁止在系统启动时自动启动nginx
 sudo systemctl enable nginx    // 设置在系统启动时自动启动nginx
 ```
+查看服务运行日志（一定要sudo）
+```commandline
+sudo journalctl -xeu nginx
+```
+Nigx服务的日志位于：
+- `/var/log/nginx/access.log`, 访问日志
+- `/var/log/nginx/error.log`, 错误日志
 
-### 配置Nginx服务
+  
+### 配置Nginx反向代理
+Nginx服务安装完成后，配置文件默认都位于`/etc/nginx`目录下。
+```commandline
+cd /etc/nginx
+```
+备份原始配置文件
+```commandline
+sudo cp nginx.conf nginx.conf.ori
+```
+
+修改`nginx.conf`配置文件，在http区块（block）中添加如下内容：
+```config
+server {
+	    listen 		80;
+	    server_name		hw.dogger.instance localhost;
+
+	    location / {
+        proxy_pass		http://k8s-master.ariman.com:31100;
+			  proxy_set_header	Host $host;
+			  proxy_set_header	X-Real-IP $remote_addr;
+			  proxy_set_header	X-Forwarded-For $proxy_add_x_forwarded_for;
+			  proxy_set_header	X-Forwarded-Proto $scheme;
+	    }
+
+	    location /dashbackend/ {
+	    	proxy_pass		http://k8s-master.ariman.com:31102;
+	    }
+}
+```
+其中，`hw.dogger.instance`是nginx服务所在服务器的公网域名，也可以是公网IP地址在本机上面设置的DNS域名，`http://k8s-master.ariman.com`则是我在/etc/hosts里面配置的本地服务器的私有IP地址的域名，因为K8S集群绑定在该私有IP地址上，31100和31102则是K8S服务所在的NodePort端口，可以被集群所在的服务器内部访问。
+
+### 最后
+反向代理只是Nginx的一种使用方式而已，更多的使用方式可以参加Nginx的官网，或者[这里](https://www.digitalocean.com/community/tutorials/how-to-install-nginx-on-debian-11)
 
