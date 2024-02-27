@@ -7,7 +7,8 @@ sudo apt update
 sudo apt install nginx
 ```
 
-#### 配置防火墙
+#### 配置防火墙(可选）
+> 默认情况下，nginx安装完成后，会自动打开HTTP端口，所以下面的步骤是可选的
 Nginx服务一般用于托管外部接入的服务，所以通常都是监听HTTP的80端口和HTTPS的443端口，这就需要在防火墙中打开响应的端口。
 ```commandline
 sudo ufw app list
@@ -42,5 +43,24 @@ Nginx HTTP                 ALLOW       Anywhere
 OpenSSH (v6)               ALLOW       Anywhere (v6)             
 Nginx HTTP (v6)            ALLOW       Anywhere (v6)
 ```
+#### 查看Nginx服务状态
+```commandline
+systemctl status nginx
 
+// 输出类似
+● nginx.service - A high performance web server and a reverse proxy server
+     Loaded: loaded (/lib/systemd/system/nginx.service; enabled; vendor preset: enabled)
+     Active: active (running) since Tue 2024-02-27 20:22:47 CST; 12min ago
+       Docs: man:nginx(8)
+    Process: 3197685 ExecStartPre=/usr/sbin/nginx -t -q -g daemon on; master_process on; (code=exited, status=0/SUCCESS)
+    Process: 3197686 ExecStart=/usr/sbin/nginx -g daemon on; master_process on; (code=exited, status=0/SUCCESS)
+   Main PID: 3197776 (nginx)
+      Tasks: 3 (limit: 4327)
+     Memory: 8.7M
+        CPU: 31ms
+     CGroup: /system.slice/nginx.service
+             ├─3197776 "nginx: master process /usr/sbin/nginx -g daemon on; master_process on;"
+             ├─3197779 "nginx: worker process" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" ""
+             └─3197780 "nginx: worker process" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" ""
+```
 ### 配置Nginx服务
